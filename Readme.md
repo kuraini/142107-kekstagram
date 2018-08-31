@@ -1,7 +1,7 @@
 # Личный проект «Кекстаграм» [![Build status][travis-image]][travis-url]
 
 * Студент: [Svetlana Borisova](https://up.htmlacademy.ru/javascript/15/user/142107).
-* Наставник: `Неизвестно`.
+* Наставник: `Без наставника`.
 
 ---
 
