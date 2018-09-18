@@ -10,6 +10,9 @@ var AVATAR_MAX = 6;
 var SCALE_STEP = 25;
 var SCALE_MIN = 25;
 var SCALE_MAX = 100;
+var BLUR_MAX = 3;
+var BRIGHTNESS_MIN = 1;
+var BRIGHTNESS_MAX = 3;
 var DEPTH_EFFECT_DEFAULT = 100;
 
 var COMMENTS = [
@@ -208,12 +211,12 @@ uploadClose.addEventListener('keydown', function (evt) {
 
 var uploadedPicture = uploadModal.querySelector('.img-upload__preview img');
 var scaleFieldset = uploadModal.querySelector('.img-upload__scale');
-var scaleControlSmaller = scaleFieldset.querySelector('.scale__control--smaller');
-var scaleControlBigger = scaleFieldset.querySelector('.scale__control--bigger');
+var buttonScaleMinus = scaleFieldset.querySelector('.scale__control--smaller');
+var buttonScalePlus = scaleFieldset.querySelector('.scale__control--bigger');
 var scaleInput = scaleFieldset.querySelector('input[name="scale"]');
-var effectLevelSlider = uploadModal.querySelector('.img-upload__effect-level');
-var effectLevelPin = effectLevelSlider.querySelector('.effect-level__pin');
-var effectLevelInput = uploadModal.querySelector('.effect-level__value');
+var effectSlider = uploadModal.querySelector('.img-upload__effect-level');
+var effectSliderPin = effectSlider.querySelector('.effect-level__pin');
+var effectSliderInput = uploadModal.querySelector('.effect-level__value');
 var effectsList = uploadModal.querySelector('.effects__list');
 
 var effectClass = null;
@@ -225,17 +228,17 @@ effectsList.addEventListener('click', function (evt) {
   effectClass = 'effects__preview--' + effect;
   uploadedPicture.classList.add(effectClass);
   uploadedPicture.style.filter = changeDepthOfEffect(DEPTH_EFFECT_DEFAULT, effect);
-  effectLevelSlider.classList.remove('hidden');
+  effectSlider.classList.remove('hidden');
 
   if (effect === 'none') {
-    effectLevelSlider.classList.add('hidden');
+    effectSlider.classList.add('hidden');
   }
 });
 
 function calculateDepthOfEffect() {
-  var barWidth = effectLevelPin.offsetParent.offsetWidth;
-  effectLevelInput.value = effectLevelPin.offsetLeft;
-  var currentDepth = 100 * effectLevelPin.offsetLeft / barWidth;
+  var barWidth = effectSliderPin.offsetParent.offsetWidth;
+  effectSliderInput.value = effectSliderPin.offsetLeft;
+  var currentDepth = 100 * effectSliderPin.offsetLeft / barWidth;
 
   return currentDepth;
 }
@@ -251,13 +254,13 @@ function changeDepthOfEffect(depth, currentEffect) {
       currentFilter = 'sepia(' + depth / 100 + ')';
       break;
     case 'marvin':
-      currentFilter = 'invert(' + depth / 100 + ')';
+      currentFilter = 'invert(' + depth + '%)';
       break;
     case 'phobos':
-      currentFilter = 'blur(' + (depth / 33.3).toFixed(2) + 'px)';
+      currentFilter = 'blur(' + (depth / 100 * BLUR_MAX) + 'px)';
       break;
     case 'heat':
-      currentFilter = 'brightness(' + (depth / 50 + 1) + ')';
+      currentFilter = 'brightness(' + (depth / 100 * (BRIGHTNESS_MAX - BRIGHTNESS_MIN)) + ')';
       break;
     default:
       currentFilter = 'none';
@@ -266,11 +269,11 @@ function changeDepthOfEffect(depth, currentEffect) {
   return currentFilter;
 }
 
-function onPinMouseup() {
+function onSliderPinMouseup() {
   changeDepthOfEffect(calculateDepthOfEffect(), uploadedPicture.classList[0].split('--')[1]);
 }
 
-effectLevelPin.addEventListener('mouseup', onPinMouseup);
+effectSliderPin.addEventListener('mouseup', onSliderPinMouseup);
 
 var currentScale = SCALE_MAX;
 
@@ -293,10 +296,10 @@ function increasePreview(step) {
   }
 }
 
-scaleControlSmaller.addEventListener('click', function () {
+buttonScaleMinus.addEventListener('click', function () {
   reducePreview(SCALE_STEP);
 });
 
-scaleControlBigger.addEventListener('click', function () {
+buttonScalePlus.addEventListener('click', function () {
   increasePreview(SCALE_STEP);
 });
