@@ -1,11 +1,19 @@
 'use strict';
 
-var PHOTOS_COUNT = 25;
-var PHOTO_CURRENT = 0;
+var ESC_KEYCODE = 27;
+var ENTER_KEYCODE = 13;
+var PHOTOS_AMOUNT = 25;
 var LIKES_MIN = 15;
 var LIKES_MAX = 200;
 var AVATAR_MIN = 1;
 var AVATAR_MAX = 6;
+var SCALE_STEP = 25;
+var SCALE_MIN = 25;
+var SCALE_MAX = 100;
+var BLUR_MAX = 3;
+var BRIGHTNESS_MIN = 1;
+var BRIGHTNESS_MAX = 3;
+var DEPTH_EFFECT_DEFAULT = 100;
 
 var COMMENTS = [
   'Всё отлично!',
@@ -34,6 +42,11 @@ var picturesSection = document.querySelector('.pictures');
 var pictureModal = document.querySelector('.big-picture');
 var commentsList = pictureModal.querySelector('.social__comments');
 var commentTemplate = commentsList.querySelector('.social__comment');
+var pictureClose = pictureModal.querySelector('#picture-cancel');
+var uploadSection = picturesSection.querySelector('.img-upload');
+var uploadFileInput = uploadSection.querySelector('#upload-file');
+var uploadModal = picturesSection.querySelector('.img-upload__overlay');
+var uploadClose = uploadModal.querySelector('#upload-cancel');
 
 function getRandomInRange(min, max) {
   return Math.floor(min + Math.random() * (max + 1 - min));
@@ -136,7 +149,157 @@ function renderPictureModal(picture) {
   commentsList.appendChild(makeFragment(picture.comments, renderComment));
 }
 
-pictures = makePictures(PHOTOS_COUNT);
+pictures = makePictures(PHOTOS_AMOUNT);
 picturesSection.appendChild(makeFragment(pictures, renderPicture));
-renderPictureModal(pictures[PHOTO_CURRENT]);
-pictureModal.classList.remove('hidden');
+
+var picturesLinks = picturesSection.querySelectorAll('a.picture');
+
+function onPictureModalEscPress(evt) {
+  if (evt.keyCode === ESC_KEYCODE) {
+    closePictureModal();
+  }
+}
+
+function openPictureModal() {
+  pictureModal.classList.remove('hidden');
+  document.addEventListener('keydown', onPictureModalEscPress);
+}
+
+function closePictureModal() {
+  pictureModal.classList.add('hidden');
+  document.removeEventListener('keydown', onPictureModalEscPress);
+}
+
+picturesLinks.forEach(function (link, i) {
+  link.addEventListener('click', function () {
+    renderPictureModal(pictures[i]);
+    openPictureModal();
+  });
+});
+
+pictureClose.addEventListener('click', closePictureModal);
+pictureClose.addEventListener('keydown', function (evt) {
+  if (evt.keyCode === ENTER_KEYCODE) {
+    closePictureModal();
+  }
+});
+
+function onUploadModalEscPress(evt) {
+  if (evt.keyCode === ESC_KEYCODE) {
+    closeUploadModal();
+  }
+}
+
+function openUploadModal() {
+  uploadModal.classList.remove('hidden');
+  document.addEventListener('keydown', onUploadModalEscPress);
+}
+
+function closeUploadModal() {
+  uploadModal.classList.add('hidden');
+  uploadFileInput.value = null;
+  document.removeEventListener('keydown', onUploadModalEscPress);
+}
+
+uploadFileInput.addEventListener('change', openUploadModal);
+uploadClose.addEventListener('click', closeUploadModal);
+uploadClose.addEventListener('keydown', function (evt) {
+  if (evt.keyCode === ENTER_KEYCODE) {
+    closeUploadModal();
+  }
+});
+
+var uploadedPicture = uploadModal.querySelector('.img-upload__preview img');
+var scaleFieldset = uploadModal.querySelector('.img-upload__scale');
+var buttonScaleMinus = scaleFieldset.querySelector('.scale__control--smaller');
+var buttonScalePlus = scaleFieldset.querySelector('.scale__control--bigger');
+var scaleInput = scaleFieldset.querySelector('input[name="scale"]');
+var effectSlider = uploadModal.querySelector('.img-upload__effect-level');
+var effectSliderPin = effectSlider.querySelector('.effect-level__pin');
+var effectSliderInput = uploadModal.querySelector('.effect-level__value');
+var effectsList = uploadModal.querySelector('.effects__list');
+
+var effectClass = null;
+
+effectsList.addEventListener('click', function (evt) {
+  var effect = evt.target.value;
+
+  uploadedPicture.classList.remove(effectClass);
+  effectClass = 'effects__preview--' + effect;
+  uploadedPicture.classList.add(effectClass);
+  uploadedPicture.style.filter = changeDepthOfEffect(DEPTH_EFFECT_DEFAULT, effect);
+  effectSlider.classList.remove('hidden');
+
+  if (effect === 'none') {
+    effectSlider.classList.add('hidden');
+  }
+});
+
+function calculateDepthOfEffect() {
+  var barWidth = effectSliderPin.offsetParent.offsetWidth;
+  effectSliderInput.value = effectSliderPin.offsetLeft;
+  var currentDepth = 100 * effectSliderPin.offsetLeft / barWidth;
+
+  return currentDepth;
+}
+
+function changeDepthOfEffect(depth, currentEffect) {
+  var currentFilter;
+
+  switch (currentEffect) {
+    case 'chrome':
+      currentFilter = 'grayscale(' + depth / 100 + ')';
+      break;
+    case 'sepia':
+      currentFilter = 'sepia(' + depth / 100 + ')';
+      break;
+    case 'marvin':
+      currentFilter = 'invert(' + depth + '%)';
+      break;
+    case 'phobos':
+      currentFilter = 'blur(' + (depth / 100 * BLUR_MAX) + 'px)';
+      break;
+    case 'heat':
+      currentFilter = 'brightness(' + (depth / 100 * (BRIGHTNESS_MAX - BRIGHTNESS_MIN)) + ')';
+      break;
+    default:
+      currentFilter = 'none';
+      break;
+  }
+  return currentFilter;
+}
+
+function onSliderPinMouseup() {
+  changeDepthOfEffect(calculateDepthOfEffect(), uploadedPicture.classList[0].split('--')[1]);
+}
+
+effectSliderPin.addEventListener('mouseup', onSliderPinMouseup);
+
+var currentScale = SCALE_MAX;
+
+function resizePreview(scaleValue) {
+  scaleInput.setAttribute('value', scaleValue + '%');
+  uploadedPicture.style.transform = 'scale(' + scaleValue / 100 + ')';
+}
+
+function reducePreview(step) {
+  if (currentScale > SCALE_MIN) {
+    currentScale -= step;
+    resizePreview(currentScale);
+  }
+}
+
+function increasePreview(step) {
+  if (currentScale < SCALE_MAX) {
+    currentScale += step;
+    resizePreview(currentScale);
+  }
+}
+
+buttonScaleMinus.addEventListener('click', function () {
+  reducePreview(SCALE_STEP);
+});
+
+buttonScalePlus.addEventListener('click', function () {
+  increasePreview(SCALE_STEP);
+});
